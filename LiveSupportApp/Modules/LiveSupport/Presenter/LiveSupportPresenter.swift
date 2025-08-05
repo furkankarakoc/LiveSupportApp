@@ -23,11 +23,14 @@ class LiveSupportPresenter: LiveSupportPresenterProtocol, LiveSupportInteractorO
     }
     
     func viewDidLoad() {
+        print("LiveSupportPresenter: View did load")
         interactor?.connectWebSocket()
         interactor?.loadInitialStep()
     }
     
     func didTapAction(_ action: ChatAction) {
+        print("User tapped action: \(action.text)")
+        
         let userMessage = ChatMessage(content: action.text, isFromUser: true)
         messages.append(userMessage)
         
@@ -35,39 +38,61 @@ class LiveSupportPresenter: LiveSupportPresenterProtocol, LiveSupportInteractorO
     }
     
     func didTapEndConversation() {
+        print("User requested end conversation")
         interactor?.endConversation()
         router?.dismissChat()
     }
     
     // MARK: - LiveSupportInteractorOutputProtocol
     func didLoadStep(_ step: ChatStep) {
-        currentStep = step
+        print("Presenter: Received new step - \(step.id)")
         
-        if let message = step.message {
-            let botMessage = ChatMessage(content: message, isFromUser: false, step: step)
-            messages.append(botMessage)
+        DispatchQueue.main.async {
+            self.currentStep = step
+            
+            if let message = step.message {
+                let botMessage = ChatMessage(content: message, isFromUser: false, step: step)
+                self.messages.append(botMessage)
+                print("Added bot message: \(String(message.prefix(50)))...")
+            }
         }
         
         view?.showStep(step)
     }
     
     func didReceiveMessage(_ message: String) {
-        let botMessage = ChatMessage(content: message, isFromUser: false)
-        messages.append(botMessage)
+        print("Presenter: Received message - \(message)")
+        
+        DispatchQueue.main.async {
+            let botMessage = ChatMessage(content: message, isFromUser: false)
+            self.messages.append(botMessage)
+        }
     }
     
     func didConnectWebSocket() {
-        isConnected = true
+        print("Presenter: WebSocket connected")
+        DispatchQueue.main.async {
+            self.isConnected = true
+        }
         view?.showConnectionStatus(true)
     }
     
     func didDisconnectWebSocket() {
-        isConnected = false
+        print("Presenter: WebSocket disconnected")
+        DispatchQueue.main.async {
+            self.isConnected = false
+        }
         view?.showConnectionStatus(false)
     }
     
     func didEncounterError(_ error: Error) {
-        errorSubject.send(error.localizedDescription)
-        view?.showError(error.localizedDescription)
+        print("Presenter: Error - \(error.localizedDescription)")
+        let errorMessage = error.localizedDescription
+        
+        DispatchQueue.main.async {
+            self.errorSubject.send(errorMessage)
+        }
+        
+        view?.showError(errorMessage)
     }
 }

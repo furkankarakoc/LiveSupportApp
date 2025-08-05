@@ -12,7 +12,8 @@ class LiveSupportInteractor: LiveSupportInteractorInputProtocol, WebSocketDelega
     
     private let webSocketManager = WebSocketManager()
     private var chatFlow: [String: ChatStep] = [:]
-    private var currentStepId = "start"
+    private var currentStepId = "step_1"
+    private var isWaitingForResponse = false
     
     init() {
         webSocketManager.delegate = self
@@ -20,184 +21,204 @@ class LiveSupportInteractor: LiveSupportInteractorInputProtocol, WebSocketDelega
     }
     
     func loadInitialStep() {
-        guard let step = chatFlow[currentStepId] else {
+        let initialStepId = "step_1"
+        guard let step = chatFlow[initialStepId] else {
+            print("Initial step '\(initialStepId)' not found")
+            print("Available steps: \(Array(chatFlow.keys))")
             presenter?.didEncounterError(NSError(domain: "ChatError", code: 1, userInfo: [NSLocalizedDescriptionKey: "Initial step not found"]))
             return
         }
+        
+        currentStepId = initialStepId
+        print("Loading initial step: \(initialStepId)")
         presenter?.didLoadStep(step)
     }
     
     func sendAction(_ action: ChatAction) {
-        let actionData = try? JSONEncoder().encode(action)
-        let actionString = actionData != nil ? String(data: actionData!, encoding: .utf8) ?? "" : ""
+        print("User action: \(action.text)")
         
-        webSocketManager.send(message: actionString)
+        if action.type == "end_conversation" {
+            handleEndConversation()
+            return
+        }
         
-        if let nextStepId = action.nextStep,
-           let nextStep = chatFlow[nextStepId] {
-            currentStepId = nextStepId
+        sendActionToWebSocket(action)
+        isWaitingForResponse = true
+    }
+    
+    private func sendActionToWebSocket(_ action: ChatAction) {
+        guard let currentStep = chatFlow[currentStepId] else {
+            print("Current step not found: \(currentStepId)")
+            return
+        }
+        
+        let message = WebSocketMessage(
+            currentStep: currentStep,
+            userAction: action
+        )
+        
+        do {
+            let jsonData = try JSONEncoder().encode(message)
+            let jsonString = String(data: jsonData, encoding: .utf8) ?? ""
             
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                self.presenter?.didLoadStep(nextStep)
-            }
-        } else if action.type == "end_conversation" {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                self.endConversation()
+            print("Sending to WebSocket: \(action.text)")
+            webSocketManager.send(message: jsonString)
+        } catch {
+            print("Failed to encode WebSocket message: \(error)")
+            fallbackToLocalNavigation(action)
+        }
+    }
+    
+    private func handleEndConversation() {
+        print("Handling end conversation")
+        
+        let endMessage = EndConversationMessage()
+        
+        do {
+            let jsonData = try JSONEncoder().encode(endMessage)
+            let jsonString = String(data: jsonData, encoding: .utf8) ?? ""
+            webSocketManager.send(message: jsonString)
+        } catch {
+            print("Failed to send end conversation message")
+        }
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            self.presenter?.didReceiveMessage("Konuşma sonlandırıldı. Teşekkürler!")
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                self.disconnectWebSocket()
             }
         }
     }
     
-    func endConversation() {
-        disconnectWebSocket()
-        presenter?.didReceiveMessage("Konuşma sonlandırıldı. Teşekkürler!")
-    }
-    
     func connectWebSocket() {
+        print("Connecting to WebSocket...")
         webSocketManager.connect()
     }
     
     func disconnectWebSocket() {
+        print("Disconnecting from WebSocket...")
         webSocketManager.disconnect()
     }
     
+    func endConversation() {
+        handleEndConversation()
+    }
+    
     private func loadChatFlow() {
-        chatFlow = JSONLoader.loadChatFlow() ?? [:]
-        
-        if chatFlow.isEmpty {
+        if let loadedFlow = JSONLoader.loadChatFlow() {
+            chatFlow = loadedFlow
+            print("Loaded chat flow from JSON with \(chatFlow.count) steps")
+        } else {
+            print("Failed to load JSON, using sample flow")
             createSampleFlow()
         }
     }
     
     private func createSampleFlow() {
         chatFlow = [
-            "start": ChatStep(
-                id: "start",
-                type: "welcome",
-                message: "Merhaba! Size nasıl yardımcı olabilirim?",
-                actions: [
-                    ChatAction(id: "1", text: "Teknik Destek", type: "navigate", nextStep: "technical", payload: nil),
-                    ChatAction(id: "2", text: "Satış Bilgisi", type: "navigate", nextStep: "sales", payload: nil),
-                    ChatAction(id: "3", text: "Genel Sorular", type: "navigate", nextStep: "general", payload: nil)
-                ],
-                nextStep: nil
-            ),
-            "technical": ChatStep(
-                id: "technical",
-                type: "support",
-                message: "Teknik destek için hangi konuda yardıma ihtiyacınız var?",
-                actions: [
-                    ChatAction(id: "4", text: "Uygulama Sorunu", type: "navigate", nextStep: "app_issue", payload: nil),
-                    ChatAction(id: "5", text: "Hesap Sorunu", type: "navigate", nextStep: "account_issue", payload: nil),
-                    ChatAction(id: "6", text: "Ana Menüye Dön", type: "navigate", nextStep: "start", payload: nil)
-                ],
-                nextStep: nil
-            ),
-            "sales": ChatStep(
-                id: "sales",
-                type: "info",
-                message: "Satış ekibimizle görüşmek ister misiniz?",
-                actions: [
-                    ChatAction(id: "7", text: "Evet, görüşmek istiyorum", type: "navigate", nextStep: "contact_sales", payload: nil),
-                    ChatAction(id: "8", text: "Hayır, teşekkürler", type: "navigate", nextStep: "start", payload: nil)
-                ],
-                nextStep: nil
-            ),
-            "general": ChatStep(
-                id: "general",
-                type: "info",
-                message: "Genel sorularınız için size yardımcı olmaya hazırım.",
-                actions: [
-                    ChatAction(id: "9", text: "SSS'yi görüntüle", type: "navigate", nextStep: "faq", payload: nil),
-                    ChatAction(id: "10", text: "Konuşmayı sonlandır", type: "end_conversation", nextStep: nil, payload: nil)
-                ],
-                nextStep: nil
-            ),
-            "contact_sales": ChatStep(
-                id: "contact_sales",
-                type: "final",
-                message: "Satış ekibimiz en kısa sürede sizinle iletişime geçecek. Teşekkürler!",
-                actions: [
-                    ChatAction(id: "11", text: "Konuşmayı sonlandır", type: "end_conversation", nextStep: nil, payload: nil)
-                ],
-                nextStep: nil
-            ),
-            "faq": ChatStep(
-                id: "faq",
-                type: "info",
-                message: "Sık sorulan sorular bölümüne yönlendiriliyorsunuz...",
-                actions: [
-                    ChatAction(id: "12", text: "Ana Menüye Dön", type: "navigate", nextStep: "start", payload: nil),
-                    ChatAction(id: "13", text: "Konuşmayı sonlandır", type: "end_conversation", nextStep: nil, payload: nil)
-                ],
-                nextStep: nil
-            ),
-            "app_issue": ChatStep(
-                id: "app_issue",
-                type: "support",
-                message: "Uygulama sorununu çözmek için lütfen uygulamayı kapatıp tekrar açmayı deneyin. Sorun devam ederse teknik ekibimiz size yardımcı olacak.",
-                actions: [
-                    ChatAction(id: "14", text: "Sorunu çözdü", type: "navigate", nextStep: "resolved", payload: nil),
-                    ChatAction(id: "15", text: "Hala sorun var", type: "navigate", nextStep: "escalate", payload: nil),
-                    ChatAction(id: "16", text: "Ana Menüye Dön", type: "navigate", nextStep: "start", payload: nil)
-                ],
-                nextStep: nil
-            ),
-            "account_issue": ChatStep(
-                id: "account_issue",
-                type: "support",
-                message: "Hesap sorunlarınız için e-posta adresinizi doğrulayın ve şifrenizi sıfırlamayı deneyin.",
-                actions: [
-                    ChatAction(id: "17", text: "Sorunu çözdü", type: "navigate", nextStep: "resolved", payload: nil),
-                    ChatAction(id: "18", text: "Hala sorun var", type: "navigate", nextStep: "escalate", payload: nil),
-                    ChatAction(id: "19", text: "Ana Menüye Dön", type: "navigate", nextStep: "start", payload: nil)
-                ],
-                nextStep: nil
-            ),
-            "resolved": ChatStep(
-                id: "resolved",
-                type: "success",
-                message: "Harika! Sorununuzu çözdüğümüze sevindik. Başka bir konuda yardıma ihtiyacınız var mı?",
-                actions: [
-                    ChatAction(id: "20", text: "Evet, başka sorum var", type: "navigate", nextStep: "start", payload: nil),
-                    ChatAction(id: "21", text: "Hayır, teşekkürler", type: "end_conversation", nextStep: nil, payload: nil)
-                ],
-                nextStep: nil
-            ),
-            "escalate": ChatStep(
-                id: "escalate",
-                type: "escalation",
-                message: "Anlıyorum. Sorununuzu üst seviye destek ekibimize yönlendiriyorum. Bir temsilcimiz 24 saat içinde sizinle iletişime geçecek.",
-                actions: [
-                    ChatAction(id: "22", text: "Teşekkürler", type: "end_conversation", nextStep: nil, payload: nil)
-                ],
-                nextStep: nil
+            "step_1": ChatStep(
+                id: "step_1",
+                type: "button",
+                content: .object(ChatContent(
+                    text: "Merhaba! Size nasıl yardımcı olabilirim?",
+                    buttons: [
+                        ChatButton(label: "Teknik Destek", action: "step_technical"),
+                        ChatButton(label: "Satış Bilgisi", action: "step_sales"),
+                        ChatButton(label: "Sohbeti bitir", action: "end_conversation")
+                    ]
+                )),
+                action: "await_user_choice"
             )
         ]
+        print("Sample flow created with \(chatFlow.count) steps")
     }
     
-    // MARK: - WebSocketDelegate
+    // MARK: - WebSocketDelegate -
     func webSocketDidConnect() {
+        print("WebSocket Connected Successfully!")
         presenter?.didConnectWebSocket()
     }
     
     func webSocketDidDisconnect() {
+        print("WebSocket Disconnected")
         presenter?.didDisconnectWebSocket()
     }
     
     func webSocketDidReceiveMessage(_ message: String) {
+        print("Received from WebSocket: \(String(message.prefix(100)))...")
         
-        if message.contains("Request served by") {
+        guard isWaitingForResponse else {
+            print("Not waiting for response, ignoring message")
             return
         }
         
-        if message.hasPrefix("{") && message.hasSuffix("}") {
+        isWaitingForResponse = false
+        handleWebSocketResponse(message)
+    }
+    
+    private func handleWebSocketResponse(_ message: String) {
+        print("Handling WebSocket response...")
+        
+        do {
+            guard let data = message.data(using: .utf8),
+                  let webSocketMessage = try? JSONDecoder().decode(WebSocketMessage.self, from: data) else {
+                print("Failed to parse WebSocket response, using fallback")
+                return
+            }
+            
+            print("WebSocket response parsed successfully")
+            
+            let userAction = webSocketMessage.userAction
+            navigateBasedOnWebSocketResponse(userAction)
+            
+        } catch {
+            print("WebSocket response parsing error: \(error)")
+        }
+    }
+    
+    private func navigateBasedOnWebSocketResponse(_ action: ChatAction) {
+        print("Navigating based on WebSocket response")
+        
+        guard let nextStepId = action.nextStep,
+              let nextStep = chatFlow[nextStepId] else {
+            print("Next step not found from WebSocket response: \(action.nextStep ?? "nil")")
             return
         }
         
-        presenter?.didReceiveMessage(message)
+        currentStepId = nextStepId
+        print("Moving to step: \(nextStepId) (from WebSocket response)")
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            self.presenter?.didLoadStep(nextStep)
+        }
+    }
+    
+    private func fallbackToLocalNavigation(_ action: ChatAction) {
+        print("Falling back to local JSON navigation")
+        
+        guard let nextStepId = action.nextStep,
+              let nextStep = chatFlow[nextStepId] else {
+            print("Next step not found in fallback: \(action.nextStep ?? "nil")")
+            return
+        }
+        
+        currentStepId = nextStepId
+        print("Moving to step: \(nextStepId) (fallback)")
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            self.presenter?.didLoadStep(nextStep)
+        }
     }
     
     func webSocketDidReceiveError(_ error: Error) {
+        print("WebSocket error: \(error.localizedDescription)")
+        
+        if error.localizedDescription.contains("Socket is not connected") {
+            print("Socket disconnection is normal during end conversation")
+            return
+        }
+        
         presenter?.didEncounterError(error)
     }
 }

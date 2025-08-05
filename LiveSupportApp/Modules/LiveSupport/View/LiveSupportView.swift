@@ -19,7 +19,6 @@ struct LiveSupportView: View {
     var body: some View {
         NavigationView {
             VStack {
-                // Header
                 HStack {
                     Text("Canlı Destek")
                         .font(.title2)
@@ -27,7 +26,6 @@ struct LiveSupportView: View {
                     
                     Spacer()
                     
-                    // Connection Status
                     HStack {
                         Circle()
                             .fill(presenter.isConnected ? Color.green : Color.red)
@@ -39,7 +37,6 @@ struct LiveSupportView: View {
                 }
                 .padding()
                 
-                // Messages
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(spacing: 12) {
@@ -48,7 +45,6 @@ struct LiveSupportView: View {
                                     .id(message.id)
                             }
                             
-                            // Action Buttons
                             if let step = presenter.currentStep,
                                let actions = step.actions {
                                 ActionButtonsView(actions: actions) { action in
@@ -72,6 +68,7 @@ struct LiveSupportView: View {
             }
             .navigationBarHidden(true)
             .onAppear {
+                print("LiveSupportView appeared")
                 presenter.viewDidLoad()
             }
         }

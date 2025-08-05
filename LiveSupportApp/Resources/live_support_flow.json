@@ -40,6 +40,24 @@
                     "action": "step_6"
                 },
                 {
+                    "label": "Ana menüye dön",
+                    "action": "step_1"
+                }
+            ]
+        },
+        "action": "await_user_choice"
+    },
+    {
+        "step": "step_3",
+        "type": "button",
+        "content": {
+            "text": "Siparişiniz şu anda kargoda. Takip numaranız: TR123456789. Başka yardıma ihtiyacınız var mı?",
+            "buttons": [
+                {
+                    "label": "Ana menüye dön",
+                    "action": "step_1"
+                },
+                {
                     "label": "Sohbeti bitir",
                     "action": "end_conversation"
                 }
@@ -48,37 +66,49 @@
         "action": "await_user_choice"
     },
     {
-        "step": "step_3",
-        "type": "text",
-        "content": "Siparişiniz şu anda kargoda. Takip numaranız: TR123456789",
-        "action": "end_conversation"
-    },
-    {
         "step": "step_4",
-        "type": "image",
-        "content": "https://example.com/urun-rehberi.png",
-        "action": "show_guide"
+        "type": "button",
+        "content": {
+            "text": "Ürün rehberimizi inceleyebilirsiniz. Başka yardıma ihtiyacınız var mı?",
+            "buttons": [
+                {
+                    "label": "Ana menüye dön",
+                    "action": "step_1"
+                },
+                {
+                    "label": "Sohbeti bitir",
+                    "action": "end_conversation"
+                }
+            ]
+        },
+        "action": "await_user_choice"
     },
     {
         "step": "step_5",
-        "type": "text",
-        "content": "Teşekkür ederiz! İade işleminiz kargoya ulaştığında işleme alınacaktır.",
-        "action": "end_conversation"
+        "type": "button",
+        "content": {
+            "text": "Teşekkür ederiz! İade işleminiz kargoya ulaştığında işleme alınacaktır. Başka yardıma ihtiyacınız var mı?",
+            "buttons": [
+                {
+                    "label": "Ana menüye dön",
+                    "action": "step_1"
+                },
+                {
+                    "label": "Sohbeti bitir",
+                    "action": "end_conversation"
+                }
+            ]
+        },
+        "action": "await_user_choice"
     },
     {
         "step": "step_6",
-        "type": "text",
-        "content": "İade işlemi için ürünü kargoya verdikten sonra işlemler başlatılacaktır. Yardıma ihtiyacınız olursa bizimle iletişime geçebilirsiniz.",
-        "action": "end_conversation"
-    },
-    {
-        "step": "step_7",
         "type": "button",
         "content": {
-            "text": "Başka nasıl yardımcı olabilirim?",
+            "text": "İade işlemi için ürünü kargoya verdikten sonra işlemler başlatılacaktır. Başka yardıma ihtiyacınız var mı?",
             "buttons": [
                 {
-                    "label": "Yeni bir işlem başlat",
+                    "label": "Ana menüye dön",
                     "action": "step_1"
                 },
                 {

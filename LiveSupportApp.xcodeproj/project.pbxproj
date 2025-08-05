@@ -29,9 +29,25 @@
 		4CCFFDAE2E420C36006C4139 /* LiveSupportAppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LiveSupportAppUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		4CCFFDFC2E42B878006C4139 /* Exceptions for "LiveSupportApp" folder in "LiveSupportApp" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Resources/Assets.xcassets,
+			);
+			platformFiltersByRelativePath = {
+				Resources/live_support_flow.json = (ios, );
+			};
+			target = 4CCFFD962E420C34006C4139 /* LiveSupportApp */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		4CCFFD992E420C34006C4139 /* LiveSupportApp */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				4CCFFDFC2E42B878006C4139 /* Exceptions for "LiveSupportApp" folder in "LiveSupportApp" target */,
+			);
 			path = LiveSupportApp;
 			sourceTree = "<group>";
 		};

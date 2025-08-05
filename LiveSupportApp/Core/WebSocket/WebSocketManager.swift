@@ -44,10 +44,14 @@ class WebSocketManager: NSObject, WebSocketManagerProtocol, ObservableObject {
     }
     
     func send(message: String) {
+        print("WebSocket sending: \(message)")
         let message = URLSessionWebSocketTask.Message.string(message)
         webSocketTask?.send(message) { [weak self] error in
             if let error = error {
+                print("WebSocket send error: \(error)")
                 self?.delegate?.webSocketDidReceiveError(error)
+            } else {
+                print("WebSocket message sent successfully")
             }
         }
     }
@@ -58,12 +62,14 @@ class WebSocketManager: NSObject, WebSocketManagerProtocol, ObservableObject {
             case .success(let message):
                 switch message {
                 case .string(let text):
+                    print("WebSocket received: \(text)")
                     DispatchQueue.main.async {
                         self?.receivedMessage = text
                     }
                     self?.delegate?.webSocketDidReceiveMessage(text)
                 case .data(let data):
                     if let text = String(data: data, encoding: .utf8) {
+                        print("WebSocket received (data): \(text)")
                         DispatchQueue.main.async {
                             self?.receivedMessage = text
                         }
@@ -75,6 +81,7 @@ class WebSocketManager: NSObject, WebSocketManagerProtocol, ObservableObject {
                 self?.receiveMessage()
                 
             case .failure(let error):
+                print("WebSocket receive error: \(error)")
                 self?.delegate?.webSocketDidReceiveError(error)
             }
         }

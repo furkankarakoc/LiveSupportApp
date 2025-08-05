@@ -21,6 +21,6 @@ class LiveSupportRouter: LiveSupportRouterProtocol {
     }
     
     func dismissChat() {
-        // close chat
+    //Close chat
     }
 }
