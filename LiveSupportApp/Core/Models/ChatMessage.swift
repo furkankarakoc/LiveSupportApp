@@ -21,3 +21,22 @@ struct ChatMessage: Codable, Identifiable {
         self.step = step
     }
 }
+
+// MARK: - Rating Models
+
+struct ConversationRating: Codable {
+    let rating: Int
+    let feedback: String?
+    let timestamp: Date
+    
+    init(rating: Int, feedback: String? = nil) {
+        self.rating = max(1, min(5, rating))
+        self.feedback = feedback
+        self.timestamp = Date()
+    }
+}
+
+enum RatingAction {
+    case submit(ConversationRating)
+    case reconnect
+}

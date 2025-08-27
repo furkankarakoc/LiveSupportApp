@@ -27,12 +27,11 @@ struct ActionButton: View {
     }
     
     private var buttonColor: Color {
-        switch action.type {
-        case "end_conversation":
+        if action.isEndConversation {
             return .red
-        case "navigate":
+        } else if action.isNavigate {
             return .blue
-        default:
+        } else {
             return .green
         }
     }

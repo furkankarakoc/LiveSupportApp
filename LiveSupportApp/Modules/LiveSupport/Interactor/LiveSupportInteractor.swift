@@ -36,12 +36,16 @@ class LiveSupportInteractor: LiveSupportInteractorInputProtocol, WebSocketDelega
     
     func sendAction(_ action: ChatAction) {
         print("User action: \(action.text)")
+        print("Action type: \(action.type)")
+        print("Action nextStep: \(action.nextStep ?? "nil")")
         
         if action.type == "end_conversation" {
+            print("Handling as end conversation action")
             handleEndConversation()
             return
         }
         
+        print("Handling as normal navigation action")
         sendActionToWebSocket(action)
         isWaitingForResponse = true
     }
@@ -70,24 +74,14 @@ class LiveSupportInteractor: LiveSupportInteractorInputProtocol, WebSocketDelega
     }
     
     private func handleEndConversation() {
-        print("Handling end conversation")
+        print("Handling end conversation - showing rating directly")
         
-        let endMessage = EndConversationMessage()
-        
-        do {
-            let jsonData = try JSONEncoder().encode(endMessage)
-            let jsonString = String(data: jsonData, encoding: .utf8) ?? ""
-            webSocketManager.send(message: jsonString)
-        } catch {
-            print("Failed to send end conversation message")
+        DispatchQueue.main.async {
+            self.presenter?.didReceiveMessage("Konuşma sonlandırıldı. Teşekkürler!")
         }
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            self.presenter?.didReceiveMessage("Konuşma sonlandırıldı. Teşekkürler!")
-            
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                self.disconnectWebSocket()
-            }
+            self.disconnectWebSocket()
         }
     }
     
@@ -147,7 +141,7 @@ class LiveSupportInteractor: LiveSupportInteractorInputProtocol, WebSocketDelega
     
     func webSocketDidReceiveMessage(_ message: String) {
         print("Received from WebSocket: \(String(message.prefix(100)))...")
-        
+                
         guard isWaitingForResponse else {
             print("Not waiting for response, ignoring message")
             return
@@ -156,6 +150,8 @@ class LiveSupportInteractor: LiveSupportInteractorInputProtocol, WebSocketDelega
         isWaitingForResponse = false
         handleWebSocketResponse(message)
     }
+    
+
     
     private func handleWebSocketResponse(_ message: String) {
         print("Handling WebSocket response...")

@@ -27,26 +27,14 @@ struct ChatStep: Codable, Identifiable {
     var actions: [ChatAction]? {
         switch content {
         case .object(let chatContent):
-            return chatContent.buttons?.map { button in
-                ChatAction(
-                    id: button.label,
-                    text: button.label,
-                    type: button.action == "end_conversation" ? "end_conversation" : "navigate",
-                    nextStep: button.action == "end_conversation" ? nil : button.action,
-                    payload: nil
-                )
+            let uniqueButtons = chatContent.buttons?.reduce(into: [ChatButton]()) { result, button in
+                if !result.contains(where: { $0.action == button.action }) {
+                    result.append(button)
+                }
             }
+            return uniqueButtons?.compactMap { createAction(from: $0) }
         case .string(_), .none:
-            if action == "end_conversation" {
-                return [ChatAction(
-                    id: "end",
-                    text: "Konuşmayı sonlandır",
-                    type: "end_conversation",
-                    nextStep: nil,
-                    payload: nil
-                )]
-            }
-            return nil
+            return createEndConversationActionIfNeeded()
         }
     }
     
@@ -55,6 +43,21 @@ struct ChatStep: Codable, Identifiable {
         case type
         case content
         case action
+    }
+        
+    private func createAction(from button: ChatButton) -> ChatAction {
+        let isEndConversation = button.action == "end_conversation"
+        
+        if isEndConversation {
+            return ChatAction.endConversation(id: button.label, text: button.label)
+        } else {
+            return ChatAction.navigate(id: button.label, text: button.label, nextStep: button.action)
+        }
+    }
+    
+    private func createEndConversationActionIfNeeded() -> [ChatAction]? {
+        guard action == "end_conversation" else { return nil }
+        return [ChatAction.endConversation()]
     }
 }
 

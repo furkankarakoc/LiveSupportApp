@@ -16,6 +16,9 @@ class LiveSupportPresenter: LiveSupportPresenterProtocol, LiveSupportInteractorO
     @Published var messages: [ChatMessage] = []
     @Published var currentStep: ChatStep?
     @Published var isConnected: Bool = false
+    @Published var isConversationEnded: Bool = false
+    @Published var showRatingView: Bool = false
+    @Published var isRatingSubmitted: Bool = false
     
     private let errorSubject = PassthroughSubject<String, Never>()
     var errorPublisher: AnyPublisher<String, Never> {
@@ -31,6 +34,8 @@ class LiveSupportPresenter: LiveSupportPresenterProtocol, LiveSupportInteractorO
     func didTapAction(_ action: ChatAction) {
         print("User tapped action: \(action.text)")
         
+        guard !isConversationEnded else { return }
+        
         let userMessage = ChatMessage(content: action.text, isFromUser: true)
         messages.append(userMessage)
         
@@ -39,13 +44,56 @@ class LiveSupportPresenter: LiveSupportPresenterProtocol, LiveSupportInteractorO
     
     func didTapEndConversation() {
         print("User requested end conversation")
+        isConversationEnded = true
+        showRatingView = true
         interactor?.endConversation()
-        router?.dismissChat()
+    }
+    
+    // MARK: - Rating Actions
+    
+    func handleRatingAction(_ action: RatingAction) {
+        switch action {
+        case .submit(let rating):
+            print("User submitted rating: \(rating.rating) stars")
+            submitRating(rating)
+            
+        case .reconnect:
+            print("User requested reconnection")
+            reconnectConversation()
+        }
+    }
+    
+    private func submitRating(_ rating: ConversationRating) {
+        print("Rating submitted: \(rating.rating) stars, Feedback: \(rating.feedback ?? "None")")
+        
+        isRatingSubmitted = true
+        
+        let thankYouMessage = ChatMessage(
+            content: "Puanınız için teşekkürler! Deneyiminizi sürekli iyileştirmeye çalışıyoruz.",
+            isFromUser: false
+        )
+        messages.append(thankYouMessage)
+        
+    }
+    
+    private func reconnectConversation() {
+        print("Reconnecting conversation")
+        
+        isConversationEnded = false
+        showRatingView = false
+        isRatingSubmitted = false
+        messages.removeAll()
+        currentStep = nil
+        
+        interactor?.connectWebSocket()
+        interactor?.loadInitialStep()
     }
     
     // MARK: - LiveSupportInteractorOutputProtocol
     func didLoadStep(_ step: ChatStep) {
         print("Presenter: Received new step - \(step.id)")
+        
+        guard !isConversationEnded else { return }
         
         DispatchQueue.main.async {
             self.currentStep = step
@@ -62,6 +110,15 @@ class LiveSupportPresenter: LiveSupportPresenterProtocol, LiveSupportInteractorO
     
     func didReceiveMessage(_ message: String) {
         print("Presenter: Received message - \(message)")
+        
+        if message.contains("Konuşma sonlandırıldı") {
+            print("End conversation message received, showing rating view")
+            isConversationEnded = true
+            showRatingView = true
+            return
+        }
+        
+        guard !isConversationEnded else { return }
         
         DispatchQueue.main.async {
             let botMessage = ChatMessage(content: message, isFromUser: false)
