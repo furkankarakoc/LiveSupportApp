@@ -21,9 +21,15 @@ struct LiveSupportView: View {
         NavigationView {
             VStack {
                 HStack {
-                    Text("Canlı Destek")
-                        .font(.title2)
-                        .fontWeight(.bold)
+                    HStack(spacing: 8) {
+                        Image(systemName: "message.circle.fill")
+                            .font(.title2)
+                            .foregroundColor(.blue)
+                        
+                        Text("Canlı Destek")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                    }
                     
                     Spacer()
                     
