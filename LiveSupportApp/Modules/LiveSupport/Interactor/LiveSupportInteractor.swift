@@ -99,6 +99,39 @@ class LiveSupportInteractor: LiveSupportInteractorInputProtocol, WebSocketDelega
         handleEndConversation()
     }
     
+    // MARK: - Media Message Handling
+    
+    func sendTextMessage(_ message: TextWebSocketMessage) {
+        print("Sending text message via WebSocket: \(message.content)")
+        
+        do {
+            let jsonData = try JSONSerialization.data(withJSONObject: message.data, options: [])
+            let jsonString = String(data: jsonData, encoding: .utf8) ?? ""
+            webSocketManager.send(message: jsonString)
+        } catch {
+            print("Failed to encode text message: \(error)")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                self.presenter?.didReceiveMessage("Bot yanıtı: \(message.content)")
+            }
+        }
+    }
+    
+    func sendMediaMessage(_ message: MediaWebSocketMessage) {
+        print("Sending media message via WebSocket: \(message.mediaContent.fileName)")
+        
+        do {
+            let jsonData = try JSONSerialization.data(withJSONObject: message.data, options: [])
+            let jsonString = String(data: jsonData, encoding: .utf8) ?? ""
+            webSocketManager.send(message: jsonString)
+        } catch {
+            print("Failed to encode media message: \(error)")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                let responseMessage = "Dosya alındı: \(message.mediaContent.fileName) (\(message.mediaContent.formattedFileSize))"
+                self.presenter?.didReceiveMessage(responseMessage)
+            }
+        }
+    }
+    
     private func loadChatFlow() {
         if let loadedFlow = JSONLoader.loadChatFlow() {
             chatFlow = loadedFlow

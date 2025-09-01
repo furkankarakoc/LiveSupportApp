@@ -49,6 +49,42 @@ class LiveSupportPresenter: LiveSupportPresenterProtocol, LiveSupportInteractorO
         interactor?.endConversation()
     }
     
+    // MARK: - Message Handling
+    
+    func didSendTextMessage(_ text: String) {
+        print("User sent text message: \(text)")
+        
+        guard !isConversationEnded else { return }
+        
+        let userMessage = ChatMessage(content: text, isFromUser: true)
+        messages.append(userMessage)
+        
+        // WebSocket'e gönder
+        let wsMessage = TextWebSocketMessage(content: text, isFromUser: true)
+        interactor?.sendTextMessage(wsMessage)
+    }
+    
+    func didSendMediaMessage(_ media: MediaContent) {
+        print("User sent media message: \(media.fileName)")
+        
+        guard !isConversationEnded else { return }
+        
+        let mediaMessage = ChatMessage(
+            content: media.displayContent,
+            isFromUser: true,
+            mediaContent: media
+        )
+        messages.append(mediaMessage)
+        
+        // WebSocket'e gönder
+        let wsMessage = MediaWebSocketMessage(
+            content: media.displayContent,
+            mediaContent: media,
+            isFromUser: true
+        )
+        interactor?.sendMediaMessage(wsMessage)
+    }
+    
     // MARK: - Rating Actions
     
     func handleRatingAction(_ action: RatingAction) {

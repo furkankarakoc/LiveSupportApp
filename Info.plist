@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>NSCameraUsageDescription</key>
+    <string>Bu uygulama fotoğraf çekmek için kamerayı kullanır.</string>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>Bu uygulama fotoğraf seçmek için fotoğraf kitaplığını kullanır.</string>
+    <key>NSPhotoLibraryAddUsageDescription</key>
+    <string>Bu uygulama fotoğraf kaydetmek için fotoğraf kitaplığını kullanır.</string>
+    <key>NSDocumentsFolderUsageDescription</key>
+    <string>Bu uygulama belgeleri seçmek için belgeler klasörünü kullanır.</string>
+</dict>
+</plist>

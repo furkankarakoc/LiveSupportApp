@@ -12,6 +12,8 @@ protocol LiveSupportInteractorInputProtocol: AnyObject {
     
     func loadInitialStep()
     func sendAction(_ action: ChatAction)
+    func sendTextMessage(_ message: TextWebSocketMessage)
+    func sendMediaMessage(_ message: MediaWebSocketMessage)
     func endConversation()
     func connectWebSocket()
     func disconnectWebSocket()

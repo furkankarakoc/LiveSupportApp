@@ -17,13 +17,17 @@ struct MessageBubble: View {
     }()
     
     var body: some View {
-        HStack {
-            if message.isFromUser {
-                Spacer()
-                userMessageView
-            } else {
-                botMessageView
-                Spacer()
+        if message.isMediaMessage {
+            MediaMessageBubble(message: message)
+        } else {
+            HStack {
+                if message.isFromUser {
+                    Spacer()
+                    userMessageView
+                } else {
+                    botMessageView
+                    Spacer()
+                }
             }
         }
     }

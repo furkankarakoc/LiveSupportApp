@@ -12,6 +12,7 @@ struct LiveSupportView: View {
     @State private var showError = false
     @State private var errorMessage = ""
     @State private var lastMessageId: UUID?
+    @State private var messageText = ""
     
     init(presenter: LiveSupportPresenter) {
         self.presenter = presenter
@@ -87,6 +88,18 @@ struct LiveSupportView: View {
                 }
                 
                 Spacer()
+                
+                if !presenter.isConversationEnded {
+                    ChatInputView(
+                        messageText: $messageText,
+                        onSendMessage: { message in
+                            presenter.didSendTextMessage(message)
+                        },
+                        onSendMedia: { media in
+                            presenter.didSendMediaMessage(media)
+                        }
+                    )
+                }
             }
             .navigationBarHidden(true)
             .onAppear {
